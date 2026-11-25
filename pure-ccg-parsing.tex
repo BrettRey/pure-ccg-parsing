@@ -1,0 +1,104 @@
+% !TEX TS-program = xelatex
+\documentclass[11pt]{article}
+\input{.house-style/preamble.tex}
+\usepackage{amsmath,amsthm}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newcommand{\papertitle}{The complexity of recognition for pure Combinatory Categorial Grammar}
+\newcommand{\paperkeywords}{Combinatory Categorial Grammar, universal recognition, composition degree, computational complexity}
+\newcommand{\NP}{\mathrm{NP}}
+\newcommand{\FPT}{\mathrm{FPT}}
+\newcommand{\Wone}{\mathrm{W}[1]}
+\hypersetup{pdftitle={\papertitle},pdfauthor={Brett Reynolds},pdfkeywords={\paperkeywords}}
+\title{\papertitle}
+\author{Brett Reynolds\\Humber Polytechnic \& University of Toronto}
+\date{24 November 2026}
+\renewcommand{\aidisclosure}[1]{%
+  \par\medskip\noindent{\small\textsc{AI use.}\enspace
+  #1 developed the reductions, wrote the verification code, and drafted this note.
+  I am responsible for the claims and arguments.\par}\medskip}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Universal recognition for Combinatory Categorial Grammar takes polynomial time when a constant bounds the degree of composition across all input grammars. Schiffer, Kuhlmann and Satta ask whether recognition stays polynomial for pure grammars when each grammar supplies its own bound and permits every composition rule through that bound. With the bound given as an integer, recognition is NP-hard and is NP-complete in the absence of empty lexical entries. A reduction from 3-SAT stores a truth assignment in the arguments of one category and rotates it once per clause. If the input lists each slash-direction pattern separately, a reduction from Clique gives \(\Wone\)-hardness parameterized by the degree. Both reductions allow the full inventory of substitution rules as well.
+\end{abstract}
+\noindent\textbf{Keywords:} \paperkeywords
+\aidisclosure{OpenAI Codex (GPT-6.2 Astra and GPT-6.2 Sol)}
+
+\section{The recognition problem}
+
+Universal recognition asks whether a grammar \(G\) derives a string \(w\), with both \(G\) and \(w\) given as input. For Combinatory Categorial Grammar (CCG) with grammar-specific rule restrictions, \textcite[\S3]{kuhlmannSattaJonsson2018} prove NP-completeness without empty lexical entries. \textcite[pp.~629--631]{schifferKuhlmannSatta2022} give a polynomial-time algorithm when a single constant bounds the degree for all grammars. They ask what happens for \emph{pure} CCG, where every unrestricted rule up to a grammar-specific degree \(d\) is available.
+
+A category is an atom or has the form \(X/Y\) or \(X\backslash Y\). Categories associate to the left. A sequence \(\beta\) of signed arguments extends a category along this left spine. In the following two forms of composition the primary input is on the left and right, respectively.
+\[
+ (X/Y)\quad Y\beta \;\Rightarrow\; X\beta,\qquad
+ Y\beta\quad(X\backslash Y) \;\Rightarrow\; X\beta .
+\]
+The degree is the length of \(\beta\), with degree zero giving application. Either slash can occur at any position of \(\beta\). The lexicon gives finitely many categories for each terminal, and a derivation combines adjacent constituents until the whole string has the distinguished atomic category. The arguments below also cover substitution as defined by \textcite[\S2.2]{schifferKuhlmannSatta2022}, where one shared argument follows the bridging argument of the primary input.
+
+\section{A queue in a category}
+\label{sec:queue}
+
+Use pairwise disjoint sets of atoms for head states \(h\), data values \(b\), and tail markers \(p\). The leftmost terminal has category \(h_0/p_0\). A category \(h/b_1/\cdots/b_s/p\) represents a queue with \(b_1\) at the front. The order of the arguments also represents a circular tape in \textcite[\S4.2.1]{kuhlmannSattaJonsson2018}. Here the two directions of composition let us read at one end and write at the other.
+
+A terminal with category \(h'\backslash(h/b)\) can use backward composition when the queue on its left begins with \(h/b\). This removes \(b\), changes the head to \(h'\), and carries over the remaining arguments. A terminal with category \(p/b/p'\) uses forward composition to replace the queue's last argument \(/p\) with \(/b/p'\). It appends \(b\) and changes the tail marker to \(p'\). A terminal with category \(p/p'\) changes the marker alone. An atomic marker at the end of the string removes the matching last argument by forward application.
+
+\begin{lemma}
+\label{lem:bracket}
+Consider a string comprising the initial terminal, a sequence of read or write terminals as above, and a final atomic marker immediately preceded by a read. In any derivation, the prefix up to the final marker acts as the sequence of the chosen operations in surface order. This holds for either rule inventory and every degree cap.
+\end{lemma}
+
+\begin{proof}
+Consider a subtree without the initial terminal. Two readers can't combine, since the right reader needs a prefix \(h/b\) and the left reader's sole slash is backward. A reader followed by a writer has incompatible primary directions. In the opposite order, the reader expects a head state and the writer expects a tail marker, so neither primary input matches. Two writer runs can combine forward if the first ends in the second's initial marker. The result concatenates their data arguments and keeps the second's final marker. The atomic marker can end a writer run by removing its last argument, and such a run has no right neighbour. By induction the subtree is a single reader, a run of writers, or a run of zero or more writers ending in the atomic marker.
+
+The terminal before the atomic marker is a reader, so the final rule uses the marker as a singleton. Follow the ancestors of the initial terminal. Each right sibling before the final marker is a reader or a writer run. Only the reader can be the primary input in backward composition. Only a writer run can match the queue's tail marker in forward composition. Each step reads the actual front of the queue or performs the indicated writes at the back.
+
+Suppose a derivation reaches its first substitution step. A reader has only one argument. Any queue or writer run with two or more arguments has a data atom as its penultimate argument. Substitution would require a secondary input with that data atom as its target, meaning its leftmost atom. The shapes just proved have head or marker targets, ruling out the step.
+\end{proof}
+
+\section{A polynomial reduction from 3-SAT}
+
+\begin{theorem}
+When the lexicon and the integer \(d\) specify a pure CCG, universal recognition is NP-hard. Universal recognition without empty lexical entries is NP-complete.
+\end{theorem}
+
+\begin{proof}
+Take a 3-CNF formula with \(n\geq 1\) variables and \(m\) clauses. Assign a distinct terminal to each position in the constructed string. After the initial terminal, \(n\) writers choose one of \(B_0,B_1\) each. Their tail markers form a chain, so the queue holds a guessed assignment in variable order.
+
+Check each clause with a scan of \(n\) pairs of terminals. In a pair the first terminal can read \(B_0\) or append \(B_1\), and the second can read \(B_1\) or append \(B_0\). Both reads require the pair's input phase and advance the head to the next phase. Both writes require the same input marker and advance the tail to the pair's next marker. Phases are unique to scan positions and tail markers are fresh except for the shared endpoints of consecutive operations. By Lemma~\ref{lem:bracket}, neither two reads nor two writes can succeed in the same pair. The one read and the one write use the same bit. The front bit is read first for \(B_0\) and written first for \(B_1\). Both orders move the front bit to the back, because the queue starts the pair with \(n\geq 1\) bits.
+
+The head state records a flag, initially false, for the current clause. The read at variable \(i\) sets it to true if it was already true or if the bit read makes a literal of variable \(i\) in the clause true. For the last variable, include an entry only if the updated flag is true, and pass false to the next phase. After each scan the queue is back in its initial order. After the last clause, \(n\) compulsory readers remove the bits, accepting either value at each step. The final marker removes the last argument and leaves the distinguished head atom.
+
+A satisfying assignment yields a left-associated derivation. A read copies at most \(n\) remaining bits and one marker, and a write copies at most two arguments, so \(d=n+2\) suffices. Conversely, each accepted derivation starts with one assignment and uses it in every scan, which forces every clause to be true. There are \(2+2n+2mn\) terminals with a constant number of category entries per terminal. Every entry has constant tree size and its atoms have polynomially bounded identifiers. Thus the reduction has polynomial size even with \(d\) in unary.
+
+For membership in \(\NP\) without empty entries, guess the lexical choices, binary bracketing, and rule at each node. Every output category has size at most the sum of the sizes of its two inputs. The sum of the selected lexical category sizes bounds every intermediate category. Checking each match, the degree, and the final category takes polynomial time.
+\end{proof}
+
+\section{Explicitly listed slash patterns}
+
+Some encodings list the \(2^j\) possible slash patterns separately at each degree \(j\). In that representation, expanding the rule inventory of the SAT reduction can take exponential time. A parameterized reduction gives a bound for this representation too.
+
+\begin{theorem}
+With all slash patterns listed explicitly, universal recognition for pure CCG is \(\Wone\)-hard parameterized by \(d\), even without empty lexical entries.
+\end{theorem}
+
+\begin{proof}
+Reduce from Clique parameterized by clique size \(k\), which is \(\Wone\)-complete \citep[cor.~3.2]{downeyFellows1995}. For a simple graph with vertices \(1,\ldots,N\), let \(1\leq k\leq N\), and guess \(k\) vertices by writing their values \(B_j\) into the queue. Each test of two queue positions uses \(k\) rotations to recover the original order. To rotate a value from an alphabet of size \(N\), use \(N+1\) terminals and consecutively indexed tail markers \(a_0,\ldots,a_{N+1}\). A terminal at position \(j\) offers up to three operations.
+\begin{enumerate}
+  \item Read \(B_j\) and advance the head phase if \(j\leq N\).
+  \item Advance the tail with \(a_{j-1}/a_j\).
+  \item Write \(B_{j-1}\) with \(a_{j-2}/B_{j-1}/a_j\) if \(j\geq2\).
+\end{enumerate}
+Each rotation has its own head phase, which can be advanced only by a read in that block. If the read occurs at position \(r\), the tail stays at \(a_{r-1}\) until the next terminal, where only the two-step write can match. This appends \(B_r\). At every other position the one-step tail change is forced. Thus a rotation restores the removed vertex at the back of the queue.
+
+For each pair \(i<j\) of queue positions, scan the \(k\) values. At position \(i\) store the vertex read in the head state. At position \(j\) allow the read only if its vertex is adjacent to the stored vertex, then forget the stored value. The graph is loopless, so success for all pairs enforces distinct vertices. Finish as in the SAT construction with \(k\) readers and a final marker. Lemma~\ref{lem:bracket} gives soundness and the left-associated derivation fits \(d=k+2\).
+
+There are \(k\binom{k}{2}\) rotation blocks, with \(N+1\) terminals and at most \(O(N)\) head states per rotation. Generating the lexicon and sentence takes polynomial time in \(N+k\). Listing the rules takes \(2^{O(k)}\) time, including the substitution patterns if present. The output parameter \(k+2\) depends only on the input parameter, giving a fixed-parameter reduction. The cases \(k>N\) can be sent to a fixed no-instance.
+\end{proof}
+
+In particular, a polynomial-time parser for the explicit encoding would decide Clique in \(2^{O(k)}\operatorname{poly}(N)\) time and imply \(\FPT=\Wone\). In both encodings the grammar remains pure. The test of a value is in the lexical category of a reader, and high-degree composition carries the uninspected part of the queue through that test.
+
+\clearpage
+\printbibliography
+\end{document}

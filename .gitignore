@@ -1,0 +1,8 @@
+/build/
+/references.bib
+/references-standalone.bib
+/hardness.md
+/review/
+__pycache__/
+*.olean
+.DS_Store
